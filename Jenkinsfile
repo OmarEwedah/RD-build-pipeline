@@ -9,10 +9,9 @@ node {
    }
    
      stage('docker build/push') {
-       //docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
-       //def app = docker.build("omarewedah/build-test:latest", '.')
-       sh 'docker build -t omarewedah/build-test:latest .'
-     //}
+       docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
+       def app = docker.build("omarewedah/build-test:latest", '.')
+     }
    }
     //} catch(e) {
     // mark build as failed
