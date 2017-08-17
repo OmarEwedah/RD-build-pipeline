@@ -10,7 +10,7 @@ node {
    
      stage('docker build/push') {
        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
-       def app = docker.build("omarewedah/build-test:latest", '.')
+       def app = docker.build("omarewedah/build-test:latest", '.').push()
      }
    }
     //} catch(e) {
