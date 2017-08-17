@@ -9,6 +9,7 @@ node {
    
      stage('build, package') {
        sh "mvn clean package"
+       input message: "Ready for Docker"
    }
    
      stage('docker build/push') {
