@@ -1,7 +1,10 @@
 node {
    //try {
+     def commit_id
      stage('Source') {
-       git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/phoneBook.git', credentialsId: 'orange-gitblit'                        
+       git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/phoneBook.git', credentialsId: 'orange-gitblit'  
+       sh "git rev-parse --short HEAD > .git/commit-id"                        
+      commit_id = readFile('.git/commit-id').trim()                      
    }
    
      stage('build, package') {
@@ -10,7 +13,7 @@ node {
    
      stage('docker build/push') {
        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
-       def app = docker.build("omarewedah/build-test:latest1", '.').push()
+       def app = docker.build("omarewedah/build-test:${commit_id}", '.').push()
      }
    }
     //} catch(e) {
