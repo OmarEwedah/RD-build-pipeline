@@ -2,7 +2,7 @@ node {
    //try {
      def commit_id
      stage('Source') {
-       git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/SearhByNumber.git', credentialsId: 'orange-gitblit'  
+       git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/SonarTest.git', credentialsId: 'orange-gitblit'  
        sh "git rev-parse --short HEAD > .git/commit-id"                        
       commit_id = readFile('.git/commit-id').trim()                      
    }
@@ -17,7 +17,7 @@ node {
       stage('sonar-scanner') {
             def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
             withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
-              sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.127:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=SearhByNumber -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD -Dsonar.tests=/var/lib/jenkins/workspace/RD -Dsonar.language=java"
+              sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.127:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=SonarTest -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD -Dsonar.tests=/var/lib/jenkins/workspace/RD -Dsonar.language=java"
             }
           }
 
