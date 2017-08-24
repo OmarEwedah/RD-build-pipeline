@@ -8,8 +8,9 @@ node {
    }
    
      stage('build, package') {
-       sh "mvn clean package"
-       input message: "Ready for Docker"
+       //sh "mvn clean package"
+      sh "mvn clean compile sonar:sonar"
+       //input message: "Ready for Docker"
    }
    
      
