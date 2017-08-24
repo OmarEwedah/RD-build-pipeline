@@ -9,7 +9,7 @@ node {
    
      stage('build, package') {
        //sh "mvn clean package"
-       sh "mvn clean install -Dmaven.test.skip=true"
+       sh "mvn sonar:sonar"
        input message: "Ready for Docker"
    }
    
