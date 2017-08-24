@@ -12,11 +12,26 @@ node {
        input message: "Ready for Docker"
    }
    
+     
+      stage('sonar-scanner') {
+            def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+            withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
+              sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.127:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=complete/src/main/ -Dsonar.tests=complete/src/test/ -Dsonar.language=java"
+            }
+          }
+
      stage('docker build/push') {
        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
        def app = docker.build("omarewedah/build-test:${commit_id}", '.').push()
      }
    }
+     
+     stage('Deploy to test QA server') {
+     }
+
+
+
+
     //} catch(e) {
     // mark build as failed
     //currentBuild.result = "FAILURE";
