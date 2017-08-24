@@ -8,7 +8,8 @@ node {
    }
    
      stage('build, package') {
-       sh "mvn clean package"
+       //sh "mvn clean package"
+       sh "mvn clean install -Dmaven.test.skip=true"
        input message: "Ready for Docker"
    }
    
