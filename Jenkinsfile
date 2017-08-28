@@ -7,9 +7,14 @@ node {
       commit_id = readFile('.git/commit-id').trim()                      
    }
    
-     stage('build, package') {
+     stage('SonarQube') {
        sh "mvn clean compile test sonar:sonar"
       //sh "mvn clean compile sona"
+       //input message: "Ready for Docker"
+   }
+
+   stage('build and package') {
+       sh "mvn clean package"
        //input message: "Ready for Docker"
    }
    
