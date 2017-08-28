@@ -34,7 +34,7 @@ node {
      
      node('ansbile') {
       stage('Deploy to test QA server') {
-      ansiblePlaybook installation: 'ansible', inventory: '/home/jenkins/jenkins-ansible-deploy/inventory', playbook: '/home/jenkins/jenkins-ansible-deploy/docker.yml', sudoUser: null
+      ansiblePlaybook installation: 'ansible', inventory: '/home/jenkins/jenkins-ansible-deploy/inventory', playbook: '/home/jenkins/jenkins-ansible-deploy/docker.yml', sudo: true, sudoUser: 'ansible'
 
       }
      }
