@@ -31,10 +31,11 @@ node {
        def app = docker.build("omarewedah/build-test:${commit_id}", '.').push()
      }
    }
-     node('slave1') {
-     stage('Deploy to test QA server') {
-     input message: "Ready for Docker"
-     }
+     
+     node('ansible') {
+      stage('Deploy to test QA server') {
+      sh "ansible-playbook docker.yml -i 84.39.38.203"
+      }
      }
 
 
