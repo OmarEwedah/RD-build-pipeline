@@ -32,7 +32,7 @@ node {
      }
    }
      
-     node('ansible') {
+     node('ansbile') {
       stage('Deploy to test QA server') {
       sh "ansible-playbook docker.yml -i 84.39.38.203"
       }
