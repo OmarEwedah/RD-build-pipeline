@@ -34,11 +34,21 @@ node {
      
      node('ansbile') {
       stage('Deploy to test QA server') {
-      ansiblePlaybook installation: 'ansible', inventory: '/home/ansible/jenkins-ansible-deploy/inventory', playbook: '/home/ansible/jenkins-ansible-deploy/docker.yml', sudo: true, sudoUser: 'ansible'
+      sh 'ansible-playbook /home/jenkins/jenkins-ansible-deploy/docker.yml -i /home/jenkins/jenkins-ansible-deploy/inventory --user=ansible --extra-vars "ansible_sudo_pass=12345"'
       }
      }
 
-
+     node('slave1') {
+      stage('runnung tests with RobotFramework') {
+        git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/functional-tests.git', credentialsId: 'orange-gitblit'
+        sh 'pybot -d output Tests/'
+    }
+      step([$class: 'RobotPublisher',
+        outputPath: 'output',
+        passThreshold: 20,
+        unstableThreshold: 80,
+        otherFiles: ""])
+     }
 
 
     //} catch(e) {
