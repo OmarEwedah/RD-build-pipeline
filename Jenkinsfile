@@ -22,13 +22,18 @@ node {
       //stage('sonar-scanner') {
             //def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
             //withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
-              //sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.38:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD/src/main/ -Dsonar.tests=/var/lib/jenkins/workspace/RD/src/test/ -Dsonar.language=java"
+              //sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.38:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD/src/main/ -Dsonar.tests=/var/lib/jenkins/workspace/RD/src/test/ -Dsonar.language=java -Dsonar.java"
             //}
           //}
+
+           stage('Jacoco fail') {
+       jacoco changeBuildStatus: true, classPattern: '**/target/classes', deltaBranchCoverage: '50', deltaClassCoverage: '50', deltaComplexityCoverage: '50', deltaInstructionCoverage: '50', deltaLineCoverage: '50', deltaMethodCoverage: '50', execPattern: '**/target/jacoco.exec', maximumBranchCoverage: '100', maximumClassCoverage: '100', maximumComplexityCoverage: '100', maximumInstructionCoverage: '100', maximumLineCoverage: '100', maximumMethodCoverage: '100', minimumBranchCoverage: '40', minimumClassCoverage: '40', minimumComplexityCoverage: '40', minimumInstructionCoverage: '40', minimumLineCoverage: '40', minimumMethodCoverage: '40'
+   }
 
      stage('docker build/push') {
        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
        def app = docker.build("omarewedah/build-test:${commit_id}", '.').push()
+       input message: "Ready to deploy to QA server??"
      }
    }
      
@@ -49,6 +54,8 @@ node {
         unstableThreshold: 80,
         otherFiles: ""])
      }
+     
+
 
 
     //} catch(e) {
