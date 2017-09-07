@@ -22,7 +22,7 @@ node {
       //stage('sonar-scanner') {
             //def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
             //withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
-              //sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://84.39.39.38:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD/src/main/ -Dsonar.tests=/var/lib/jenkins/workspace/RD/src/test/ -Dsonar.language=java -Dsonar.java"
+              //sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://52.14.201.16:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD/src/main/ -Dsonar.tests=/var/lib/jenkins/workspace/RD/src/test/ -Dsonar.language=java -Dsonar.java"
             //}
           //}
 
@@ -39,7 +39,9 @@ node {
      
      node('ansbile') {
       stage('Deploy to test QA server') {
-      sh 'ansible-playbook /home/jenkins/jenkins-ansible-deploy/docker.yml -i /home/jenkins/jenkins-ansible-deploy/inventory --user=ansible --extra-vars "ansible_sudo_pass=12345"'
+           def image_name
+           image_name = "omarewedah/build-test:${commit_id}"
+           sh "ansible-playbook /home/jenkins/jenkins-ansible-deploy/docker.yml -i /home/jenkins/jenkins-ansible-deploy/inventory --user=ansible --extra-vars ansible_sudo_pass=12345 --extra-vars CONTAINER_NAME=phonebook --extra-vars IMAGE_NAME=${image_name} --extra-vars ACTIVE_PROFILE=production --extra-vars CONFIG_SERVER_URL=http://18.221.3.67:8083 --extra-vars EUREKA_INSTANCE_HOSTNAME=13.59.152.223 --extra-vars EUREKA_INSTANCE_NONSECUREPORT=8081"
       }
      }
 
