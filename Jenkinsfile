@@ -1,75 +1,135 @@
-node {
-   //try {
-     def commit_id
-     stage('Source') {
-       git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/phoneBook.git', credentialsId: 'orange-gitblit'  
-       sh "git rev-parse --short HEAD > .git/commit-id"                        
-      commit_id = readFile('.git/commit-id').trim()                      
-   }
-   
-     stage('SonarQube') {
-       sh "mvn clean compile test sonar:sonar"
-      //sh "mvn clean compile sona"
-       //input message: "Ready for Docker"
-   }
+import groovy.json.JsonSlurperClassic
+@NonCPS
+def getMicroServicesConfig(def url){
 
-   stage('build and package') {
-       sh "mvn clean package"
-       //input message: "Ready for Docker"
-   }
-   
-     
-      //stage('sonar-scanner') {
-            //def sonarqubeScannerHome = tool name: 'sonar', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-            //withCredentials([string(credentialsId: 'sonar', variable: 'sonarLogin')]) {
-              //sh "${sonarqubeScannerHome}/bin/sonar-scanner -e -Dsonar.host.url=http://52.14.201.16:9000 -Dsonar.login=${sonarLogin} -Dsonar.projectName=phoneBook -Dsonar.projectVersion=${env.BUILD_NUMBER} -Dsonar.projectKey=GS -Dsonar.sources=/var/lib/jenkins/workspace/RD/src/main/ -Dsonar.tests=/var/lib/jenkins/workspace/RD/src/test/ -Dsonar.language=java -Dsonar.java"
-            //}
-          //}
+  def result = new URL(url).getText()
 
-           stage('Jacoco fail') {
-       jacoco changeBuildStatus: true, classPattern: '**/target/classes', deltaBranchCoverage: '50', deltaClassCoverage: '50', deltaComplexityCoverage: '50', deltaInstructionCoverage: '50', deltaLineCoverage: '50', deltaMethodCoverage: '50', execPattern: '**/target/jacoco.exec', maximumBranchCoverage: '100', maximumClassCoverage: '100', maximumComplexityCoverage: '100', maximumInstructionCoverage: '100', maximumLineCoverage: '100', maximumMethodCoverage: '100', minimumBranchCoverage: '40', minimumClassCoverage: '40', minimumComplexityCoverage: '40', minimumInstructionCoverage: '40', minimumLineCoverage: '40', minimumMethodCoverage: '40'
-   }
 
-     stage('docker build/push') {
-       docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
-       def app = docker.build("omarewedah/build-test:${commit_id}", '.').push()
-       input message: "Ready to deploy to QA server??"
+  def microConfigDict = new JsonSlurperClassic().parseText(result)
+  def keys = microConfigDict.keySet() as List
+  def microConfigs = []
+
+  for (key in keys){
+    microConfigs << microConfigDict[key]
+
+  }
+  return microConfigs
+}
+node{
+    try {
+
+
+  
+    def repos = getMicroServicesConfig("http://18.221.3.67:8083/jenkinsbuild-all.json")
+    
+
+    for(repo in repos){
+      
+        
+      def commit_id
+        dir (repo["serviceName"]){
+            
+         stage('Checkout') {
+           git url: repo["gitRepo"], credentialsId: 'orange-gitblit'  //param
+           sh "git rev-parse --short HEAD > .git/commit-id"                        
+          commit_id = readFile('.git/commit-id').trim()  
+          repo."commitId" = commit_id
+          }
+        }
+       
+
+
+      dir (repo["serviceName"]){
+        stage('SonarQube Clean, Compile, Test') {
+  
+               withSonarQubeEnv('sonar') {
+              sh "mvn clean compile test sonar:sonar"
+           }
+           
+                  timeout(time: 1, unit: 'HOURS') { // Just in case something goes wrong, pipeline will be killed after a timeout
+                    def qg = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+                    print  qg
+                  }
+                
+        }
+          
+       stage('Maven Cleaning, Package') {
+           sh "mvn clean package -Dclass.lines.covered.ratio=${repo["classLinesCoveredRatio"]}"
+           archiveArtifacts 'target/*.jar'
+       
+       }
+       
+        stage('Jacoco') {
+           jacoco classPattern: '**/target/classes', execPattern: '**/target/jacoco.exec'
+          }
+      
+
+       
      }
-   }
-     
-     node('ansbile') {
-      stage('Deploy to test QA server') {
-           def image_name
-           image_name = "omarewedah/build-test:${commit_id}"
-           sh "ansible-playbook /home/jenkins/jenkins-ansible-deploy/docker.yml -i /home/jenkins/jenkins-ansible-deploy/inventory --user=ansible --extra-vars ansible_sudo_pass=12345 --extra-vars CONTAINER_NAME=phonebook --extra-vars IMAGE_NAME=${image_name} --extra-vars ACTIVE_PROFILE=production --extra-vars CONFIG_SERVER_URL=http://18.221.3.67:8083 --extra-vars EUREKA_INSTANCE_HOSTNAME=13.59.152.223 --extra-vars EUREKA_INSTANCE_NONSECUREPORT=8081"
       }
-     }
-
-     node('slave1') {
-      stage('runnung tests with RobotFramework') {
-        git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/functional-tests.git', credentialsId: 'orange-gitblit'
-        sh 'pybot -d output Tests/'
-    }
-      step([$class: 'RobotPublisher',
-        outputPath: 'output',
-        passThreshold: 20,
-        unstableThreshold: 80,
-        otherFiles: ""])
-     }
+      
+      for(repo in repos){
+    
+            dir (repo["serviceName"]){
+                stage('Docker Build, Push') {
+                     docker.withRegistry('https://index.docker.io/v1/', 'docker-hub') {
+                     def app = docker.build("${repo["dockerImageName"]}:${repo["commitId"]}", '.').push() //param
+                   }
+                }
+            }
+            
+      }
      
+     input message: "Ready to deploy to QA server??"
+      node('ansbile') {
+         
+                  stage('Deploy To  QA Server') {
+                    // def image_name
+                    for(repo in repos){
+                       def image_name = "${repo["dockerImageName"]}:${repo["commitId"]}"
+                       sh "ansible-playbook /home/jenkins/jenkins-ansible-deploy/docker.yml -i /home/jenkins/jenkins-ansible-deploy/inventory --user=ansible --extra-vars ansible_sudo_pass=12345 --extra-vars CONTAINER_NAME=${repo["serviceName"]} --extra-vars CONTAINER_PORT=${repo["containerPort"]} --extra-vars IMAGE_NAME=${image_name} --extra-vars ACTIVE_PROFILE=${repo["activeProfile"]} --extra-vars CONFIG_SERVER_URL=${repo["configServerUrl"]} --extra-vars EUREKA_INSTANCE_HOSTNAME=${repo["eurekaInstanceHostname"]} --extra-vars EUREKA_INSTANCE_NONSECUREPORT=${repo["eurekaInstanceNonsecureport"]}"
+                  
+                    } 
+                      
+                  }
+   }
+      input message: "Do you want run Robot ?"
+      node('slave1'){
+          git url: 'https://olc.orange-labs.fr/gitblit/git/CRD/functional-tests.git', credentialsId: 'orange-gitblit'
+             sh 'pybot -d out Tests/AddPhoneBook.robot'
+      }
+     
+  } catch (err) {
+        //notify("ERROR!: ${err}")
+        currentBuild.result = 'FAILURE'
+    }
 
+      finally {
+        node('slave1'){
+        step([$class: 'RobotPublisher', 
+    outputPath:'out', 
+    passThreshold: 0, 
+    unstableThreshold: 0, 
+    otherFiles: "", 
+    logFileName: 'log.html', 
+    outputFileName: 'output.xml', 
+    reportFileName: 'report.html'])
+        }
+      
+  }
 
+}  
 
-    //} catch(e) {
+    } catch(e) {
     // mark build as failed
-    //currentBuild.result = "FAILURE";
+    currentBuild.result = "FAILURE";
     // set variables
-    //def content = '${JELLY_SCRIPT,template="html"}'
+    def content = '${JELLY_SCRIPT,template="html"}'
 
     // send email
-     //emailext(body: content, mimeType: 'text/html',
-         //subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} ${currentBuild.result}",
-         //to: 'ewedah88@gmail.com', attachLog: true )
+     emailext(body: content, mimeType: 'text/html',
+         subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} ${currentBuild.result}",
+         to: 'oewedah.ext@orange.com', attachLog: true )
 
        // send slack notification
     //slackSend (color: '#FF0000', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
